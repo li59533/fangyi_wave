@@ -17,6 +17,8 @@
 *
 *********************************************************************************************************
 */	
+
+#include "DataEmuTask.h"
 #include "Esp32ProcessTask.h"
 #include "main.h"
 #include "cmsis_os.h"
@@ -755,21 +757,12 @@ void BoardAutoPeroidWave(void)
 
 #define PROTOCOL_HEAD_FANGYI		0X7A
 #define PROTOCOL_WAVE_POINT			500
-#pragma pack(1)
-typedef struct
-{
-	uint8_t Head;
-	uint8_t NodeNum;
-	uint8_t ChannelNum;
-	uint8_t CurMode;
-	uint16_t TotalPackage;
-	uint32_t CurPackage;
-	uint16_t SampleRate;
-	uint16_t Battery;
-	int16_t Temperature[3];
-	uint16_t * Wave;
-}Protocol_Wave_Fangyi_t ; 
-#pragma pack()
+#define PROTOCOL_CHANNEL_Z			2
+#define PROTOCOL_CHANNEL_X			4
+#define PROTOCOL_CHANNEL_Y			5
+
+
+
 
 static uint16_t wave_fangyi_space[PROTOCOL_WAVE_POINT] = { 0 }; 
 Protocol_Wave_Fangyi_t Protocol_Wave_Fangyi = 
@@ -779,11 +772,12 @@ Protocol_Wave_Fangyi_t Protocol_Wave_Fangyi =
 
 void BoardPeroidWave_ForFangyi(void)
 {
+	uint32_t SAMPLEblock=(currentSAMPLEblock+1)%2;;
 	int16_t * p = 0;
 	int16_t value = 0;
-	for(uint32_t ii=0;ii<Acceleration_ADCHS;ii++)
+	for(uint32_t channel_index = 0 ; channel_index < Acceleration_ADCHS ; channel_index ++)
 	{
-		switch(ii)
+		switch(channel_index)
 		{
 			case 0:
 			p=&piz_emu_data[SAMPLEblock][0];
@@ -801,51 +795,75 @@ void BoardPeroidWave_ForFangyi(void)
 			break;
 		}
 		
-		float inter_factor=config.floatadc[ii]*config.floatscale[ii];
+		float inter_factor=config.floatadc[channel_index]*config.floatscale[channel_index] *1250.0f/config.floatrange[channel_index];
 		
-	
+		// ------Head----------
 		Protocol_Wave_Fangyi.Head = PROTOCOL_HEAD_FANGYI;
+		// --------------------
+		// ------Node_Num------
 		Protocol_Wave_Fangyi.NodeNum = config.SNnumber[7];
-		Protocol_Wave_Fangyi.ChannelNum = ii;
+		// --------------------
+		// ------Channel_Num---
+		switch(channel_index)
+		{
+			case 0 : Protocol_Wave_Fangyi.ChannelNum = PROTOCOL_CHANNEL_Z; break;
+			case 1 : Protocol_Wave_Fangyi.ChannelNum = PROTOCOL_CHANNEL_X; break;
+			case 2 : Protocol_Wave_Fangyi.ChannelNum = PROTOCOL_CHANNEL_Y; break;
+			default: Protocol_Wave_Fangyi.ChannelNum = PROTOCOL_CHANNEL_Z; break;
+		}
+		// ---------------------
+		// ------- Cur_Mode-----
 		Protocol_Wave_Fangyi.CurMode = 0x00;
-		Protocol_Wave_Fangyi.TotalPackage = config.channel_freq[ii] / PROTOCOL_WAVE_POINT + 1;
-		Protocol_Wave_Fangyi.SampleRate = config.channel_freq[ii] ;
+		// ---------------------
+		// ------- Total Package---
+		if( config.channel_freq[channel_index] % PROTOCOL_WAVE_POINT != 0)
+		{
+			Protocol_Wave_Fangyi.TotalPackage = config.channel_freq[channel_index] / PROTOCOL_WAVE_POINT + 1;
+		}
+		else
+		{
+			Protocol_Wave_Fangyi.TotalPackage = config.channel_freq[channel_index] / PROTOCOL_WAVE_POINT;
+		}
+		// ------------------------
+		// ------- SampleRate------
+		Protocol_Wave_Fangyi.SampleRate = config.channel_freq[channel_index] ;
+		// ------------------------
+		// ------- Battery --------
 		Protocol_Wave_Fangyi.Battery = config.battery;
-		Protocol_Wave_Fangyi.Temperature[0] = 0;
-		Protocol_Wave_Fangyi.Temperature[1] = 1;
-		Protocol_Wave_Fangyi.Temperature[2] = 2;
+		// ------------------------
+		// ------- Temperature-----
+		Protocol_Wave_Fangyi.Temperature[0] = (int16_t)(Parameter.pdate * 100);
+		Protocol_Wave_Fangyi.Temperature[1] = 0;
+		// ------------------------
 		
-//		for( uint32_t i = 0 ; i < Protocol_Wave_Fangyi.TotalPackage; i ++ ) 
-//		{
-//			Protocol_Wave_Fangyi.CurPackage = i;
-//			for(uint16_t k = 0 ; k < PROTOCOL_WAVE_POINT ; k ++)
-//			{
-//				value = p[k] * inter_factor;
-//			}
-//			Protocol_Wave_Fangyi.Wave
-//			
-//			yy = *p;
-//			p ++;
-//			sendperioddata = yy * inter_factor;//(int16_t)(yy*Parameter.ReciprocalofRange[ii]);
-
-//			PeriodWaveToSend[wpp + 14] = sendperioddata;
-//			PeriodWaveToSend[wpp + 15] = sendperioddata >>8;
-//			checksum += (PeriodWaveToSend[wpp + 14] + PeriodWaveToSend[wpp + 15]);			 
-//			wpp = wpp + 2;			
-//			if(wpp > (PERIODBOARDPOINTS - 1)) 
-//			{	
-
-//				WriteDataToTXDBUF(PeriodWaveToSend,PERIODBOARDPOINTS+16);	
-
-//				osDelay(1);
-//			}	 
-//		}
+		// -------Send Wave--------
+		for( uint32_t i = 0 ; i < Protocol_Wave_Fangyi.TotalPackage; i ++ ) 
+		{
+			// -------CurPackage--------
+			Protocol_Wave_Fangyi.CurPackage = i;
+			// -------------------------
+			
+			// ------Clear Space -------
+			memset(Protocol_Wave_Fangyi.Wave , 0 , sizeof(uint16_t) * PROTOCOL_WAVE_POINT);
+			// -------------------------
+			// --------Move Buf---------
+			for(uint16_t k = 0 ; k < PROTOCOL_WAVE_POINT ; k ++)
+			{
+				if((k + i * PROTOCOL_WAVE_POINT) >= config.channel_freq[channel_index])
+				{
+					break;
+				}
+				Protocol_Wave_Fangyi.Wave[k] = p[k +  i * PROTOCOL_WAVE_POINT] * inter_factor;
+			}
+			// -----------Send-----------
+			WriteDataToTXDBUF(&Protocol_Wave_Fangyi.Head , 1020);	
+			// --------------------------
+			osDelay(1);
+		}
+		// --------------------------
 	}
 
 }
-
-
-
 
 
 static uint16_t BoardPeroidWave_packege_flag=0;  //请求波形包号
@@ -856,7 +874,7 @@ void BoardPeroidWave(void)
 { 
 	uint8_t checksum=0;
 	static uint32_t wpp=0;
-  uint32_t SAMPLEblock=(currentSAMPLEblock+1)%2;
+	uint32_t SAMPLEblock=(currentSAMPLEblock+1)%2;
 	int16_t send_perioddata=0;
 	float yy;
 	uint16_t buflength=PERIODBOARDPOINTS+1+7+2;//1个字节通道号 7个字节时间，2个字节包号
@@ -886,7 +904,7 @@ void BoardPeroidWave(void)
 		PeriodWaveToSend[wpp+15]=send_perioddata>>8;
 		checksum+=(PeriodWaveToSend[wpp+14]+PeriodWaveToSend[wpp+15]);			 
 		wpp=wpp+2;			
-  if(wpp>(PERIODBOARDPOINTS-1)) {			
+		if(wpp>(PERIODBOARDPOINTS-1)) {			
 		PeriodWaveToSend[0]=0x7e;//TELid;
 		PeriodWaveToSend[1]=0x30;//TELid>>8;	
 		PeriodWaveToSend[2]=buflength;//TELid>>16;
