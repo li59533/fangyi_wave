@@ -81,12 +81,12 @@ struct  CONFIG  config={
 	.DataToBoardMode = PARAMETERMODE,
 	.DataToSendChannel =  0x1F,           //
 	.DHCP = 1, //DHCP
-	.APssid =   "yec-test",//"TP-LINK_FF18E4",//"Tenda_4F7AC0",//"yec-test",//"wifi-sensor",//"Tenda_1E6760",//"TP-LINK-SCZZB",//"yec-test",//"wifi-sensor",//"TP-LINK-sczzb2",//"hold-704",//"wifi-test1",//"yec-test",//"wifi-test",//"yec-test",//"zl_sensor",/////"yec-test",//"test3",//"qiangang2", //"qiangang1", //"qiangang1", /////
-	.APpassword = "",//"",//"china-yec",//"",//"wifi-sensor",//"18051061462",//"wifi-test",//"zl_sensor",///"china-yec",//"",////"",//"zl_sensor",/"lft13852578307",//"",//"",//"123456789",//"china-yec.com",// //
-	.TcpServer_IP = "192.168.100.233",// "218.91.149.114",//"192.168.0.234",//"192.168.0.233",//"192.168.0.233",//"192.168.0.141",// "192.168.0.112",//
+	.APssid =   "Bigym",//"TP-LINK_FF18E4",//"Tenda_4F7AC0",//"yec-test",//"wifi-sensor",//"Tenda_1E6760",//"TP-LINK-SCZZB",//"yec-test",//"wifi-sensor",//"TP-LINK-sczzb2",//"hold-704",//"wifi-test1",//"yec-test",//"wifi-test",//"yec-test",//"zl_sensor",/////"yec-test",//"test3",//"qiangang2", //"qiangang1", //"qiangang1", /////
+	.APpassword = "12345678",//"",//"china-yec",//"",//"wifi-sensor",//"18051061462",//"wifi-test",//"zl_sensor",///"china-yec",//"",////"",//"zl_sensor",/"lft13852578307",//"",//"",//"123456789",//"china-yec.com",// //
+	.TcpServer_IP = "192.168.2.100",// "218.91.149.114",//"192.168.0.234",//"192.168.0.233",//"192.168.0.233",//"192.168.0.141",// "192.168.0.112",//
 	.TcpServer_Port = "8712", //
-	.LocalIP = "192.168.99.45",  //LocalIP
-	.LocalGATEWAY =  "192.168.99.1",  //LocalGATEWAY
+	.LocalIP = "192.168.2.200",  //LocalIP
+	.LocalGATEWAY =  "192.168.2.1",  //LocalGATEWAY
 	.LocalMASK = "255.255.255.0",	//LocalMASK
 	.PeriodTransimissonCounter = 1,
 	.PeriodTransimissonStatus = 1,
@@ -99,7 +99,7 @@ struct  CONFIG  config={
 	.channel_freq = {16384,8192,8192,8192,51200,51200,51200,51200,51200,51200,12800,12800},
 	.BeaconInterval = 5, //
 	.server_address = "www.av.com",
-	.DNS_SERVERIP = "192.168.120.120",
+	.DNS_SERVERIP = "8.8.8.8",
 	.Lowpower_Mode = 0,  //Lowpower_Mode 1
 	.scan_channel = 6,  //scan_channel
 	.Waitforsleeptime = 12, //Waitforsleeptime
@@ -114,6 +114,7 @@ struct  CONFIG  config={
 	.tempCompensation = -5 ,
 	//.Alarm_source_number = ,
 	//.Alarm_source = 
+	.sample_time = 1,
 };
 
 /* USER CODE END PM */
@@ -164,7 +165,7 @@ int main(void)
 	/* USER CODE BEGIN 1 */
 
 	/* USER CODE END 1 */
-	SCB->VTOR = 0x8020000;
+	//SCB->VTOR = 0x8020000;
 
 	/* MCU Configuration--------------------------------------------------------*/
 
@@ -279,13 +280,13 @@ int main(void)
 	Esp32ProcessHandle = osThreadNew(Esp32ProcessFunction, NULL, &Esp32Process_attributes);
 	
 	
-	const osThreadAttr_t NetProcess_attributes = {
-		.name = "NetProcess",
-		.stack_size = 512,
-		.priority = (osPriority_t) osPriorityNormal1,
-	};
-	NetProcessHandle = osThreadNew(NetProcessFunction, NULL, &NetProcess_attributes);	
-	
+//	const osThreadAttr_t NetProcess_attributes = {
+//		.name = "NetProcess",
+//		.stack_size = 512,
+//		.priority = (osPriority_t) osPriorityNormal1,
+//	};
+//	NetProcessHandle = osThreadNew(NetProcessFunction, NULL, &NetProcess_attributes);	
+//	
 	/* USER CODE END RTOS_THREADS */
 
 	/* Start scheduler */

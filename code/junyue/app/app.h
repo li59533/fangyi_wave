@@ -241,7 +241,7 @@ typedef struct  CONFIG				 // 配置信息
 	int16_t tempCompensation; 
 	uint8_t Alarm_source_number[10];//10个规则，每个规则的报警源数目，为0则不报警。
 	RULE Alarm_source[10][20]; //二维数组，最多10个规则，每个规则最多20个报警源
-
+	uint16_t sample_time;
 }CONFIG;
 
 extern  struct CONFIG  config;  //配置信息

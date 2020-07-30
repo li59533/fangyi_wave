@@ -1035,14 +1035,15 @@ void DataEmuFunction(void *argument)
 				
 //						bsp_LedStatue(0,1);
 					
-						EmuData();
+						//EmuData();
 					
 					 if(Parameter.wakeupsourec==MANUALRESET)
 					 {
 						 //	EMUTemp();
 //						BoardParameter_withtime();
-						BoardParameter_withtime_forJUNYUE();
-						BoardAutoPeroidWave();  //仅在特征值模式下生效
+						//BoardParameter_withtime_forJUNYUE();
+						//BoardAutoPeroidWave();  //仅在特征值模式下生效
+						 BoardPeroidWave_ForFangyi();
 						DisablePeroidWaveAutoTransmission();
 						 DEBUG("SendValue\r\n");
 					 }
@@ -1073,11 +1074,11 @@ void DataEmuFunction(void *argument)
 						 if(Esp32_GetSendDeivceInfo_Flag() == 1)
 						 {
 							Esp32_ClearSendDeviceInfo_Flag();
-							EmuData();
+							//EmuData();
 
-							BoardParameter_withtime_forJUNYUE();
-							BoardAutoPeroidWave();
-
+							//BoardParameter_withtime_forJUNYUE();
+							// BoardAutoPeroidWave();
+							BoardPeroidWave_ForFangyi();
 							TransmitOverInLowPower(); //后期控制这个，可以决定传多少秒
 							DEBUG("SendValue\r\n");
 						 }

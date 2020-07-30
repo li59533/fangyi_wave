@@ -6,6 +6,9 @@
 #include "version.h"
 #include "clog.h"
 #include "nettask.h"
+#include "RxdBufProcessTask.h"
+#include "crc.h"
+
 
 extern TIM_HandleTypeDef htim8;
 extern uint8_t   RxdBuf[RxdBufLine];
@@ -1438,147 +1441,156 @@ uint8_t AnalyCmd(uint16_t length)
 //	  sum+=RxdBuf[i];
 //	if(sum!=RxdBuf[length-2])
 //		return 0;              //ÇóºÍÎ»²»¶Ô£¬pass
-	switch( RXDCmdBuf[1] ){     //¿´ÃüÁîĞĞ
-		case COMMAND_ID:     //0x02
-			   command_id();
-			break;
-		case COMMAND_CHANNELKIND:     //0x03 Í¨µÀÀàĞÍÉèÖÃ
-			   command_channelkind();
-			break;
-		case COMMAND_REPLYIP:     //0x03 Í¨µÀÀàĞÍÉèÖÃ
-			   command_replyip();
-			break;
-		case COMMAND_STOP:
-			   command_stop();
-			break;
-		case COMMAND_RECEIVE_BEACON:
-				DEBUG("COMMAND_RECEIVE_BEACON\r\n");
-				Net_Task_UpdataConnectFlag();
-		
-				command_receive_beacon();
-			break;
-		case COMMAND_SETIP:   //ÉèÖÃIPµØÖ·
-			   command_setip();
-			break;
-		case COMMAND_SET_RUNMODE:   //ÉèÖÃIPµØÖ·
-			   command_setrunmode();
-			break;
-		case COMMAND_START:
-			   command_start();
-			break;
-		case COMMAND_REQUIRE_PERIODWAVE:
-			   command_require_periodwave();
-			break;
-		case COMMAND_SET_AP:
-			   command_set_ap();
-			break;
-		case COMMAND_RECEIVE_ACTIVE_BEACON:
-					command_receive_active_beacon();
-			break;
-		case COMMAND_SET_FACTORY_PARAMETER:
-					command_set_factory_parameter();
-			break;
-		case COMMAND_SET_CHANNEL_CONDITION:
-			   command_set_channel_condition();
-			break;
-		case COMMAND_REPLY_CHANNEL_CONDITION:
-			   command_reply_channel_condition();
-			break;
-		case COMMAND_REPLY_RATE:    //ÉèÖÃ²ÉÑù²ÎÊı
-			   command_reply_SampleParameter();
-		  break;
-		case COMMAND_SAMPLE_RATE:    //ÉèÖÃ²ÉÑù²ÎÊı
-			   command_set_SampleParameter();
-			break;
-		case COMMAND_SET_TCPSERVE:   //ÉèÖÃtcp serverµÄÄ¿±êµØÖ·ÀàËÆ
-			   command_set_tcpserve();
-		  break;
-		case COMMAND_REPLYTCPSERVE:   //·µ»Øtcp serverµÄÄ¿±êµØÖ·ÀàËÆ
-			   command_replytcpserve();
-			break; 
-		case COMMAND_SET_TIME:           //·µ»ØapÖµ
-			   command_set_time();
-      break;		
-		case COMMAND_REPLYAP:
-			   command_replyap();  //·µ»ØapÖµ
-			break;
-		case COMMAND_APPLYNETSET:
-				command_applynetset();  //Ó¦ÓÃÍøÂçÉèÖÃ
-				osDelay (1000);
-				software_reset();
-			break;
-		 case 0x40:
-			   command_counter();  //Ó¦ÓÃÍøÂçÉèÖÃ
-			break;
-		 case COMMAND_SET_ALARM_SOURCE:
-			   command_set_alarm_source();
-			break;
-		case COMMAND_REPLY_ALARM_SOURCE:
-//			   command_reply_alarm_source();
-			break;
-		case COMMAND_SET_LOW_POWER:
-			   command_set_lowpower();
-			break;
-		case COMMAND_REPLY_LOW_POWER:
-		     command_reply_lowpower();
-			break;
-		case COMMAND_SET_LOWPOWER_VALUE:
-			   command_set_lowpower_value();
-			break;
-		case COMMAND_REPLY_LOWPOWER_VALUE:
-		     command_reply_lowpower_value();
-			break;
-		case COMMAND_REPLY_RUNMODE:
-			   command_reply_runmode();
-		  break;
-		case COMMAND_ADJUST_TEMP:
-			   command_adjust_temp();
-		  break;
-		case COMMAND_ADJUST_ADC:
-			   command_adjust_adc();
-		  break;
-		case COMMAND_SET_SCALE:
-			   command_set_scale();
-			break;
-		case COMMAND_REPLY_SCALE:
-			   command_reply_scale();
-			break;
-    case COMMAND_SET_SNNUMBER:
-				command_set_snnumber();
-				osDelay (1000);
-				software_reset();
-			break;
-		case COMMAND_IAP_STATUE:
-			   command_iap_statue();
-			break;
-		case COMMAND_REPLY_SW_VERSION:
-			   command_reply_sw_version();
-			break;
-		case COMMAND_IAP_DATA:
-			   command_iap_data();
-			break;
-		case COMMAND_RESET_SYSTEM:
-			   command_reset_system();
-			break;
-		case COMMAND_TRANSMINT_OVER:
-			   command_server_accept_data();
-			break;
-		case COMMAND_SET_ALARMVALUE:
-			   command_set_alarm_value();
-			break;
-		case COMMAND_REPLY_ALARMVALUE:
-			   command_reply_alarm_value();
-			break;
-		case COMMAND_ESP32_STATUE:
-			   command_esp32_statue();
-			break;
-		case COMMAND_SET_BATTERY:
-				command_set_battery();
-			break;
-		default:
-			return 1;
+	
+	if(RXDCmdBuf[0] == RX_CONF_HEAD)
+	{
+		Rx_Conf_Req(RXDCmdBuf , length);
 	}
- return 1;
+	else
+	{
+		switch( RXDCmdBuf[1] )
+		{     //¿´ÃüÁîĞĞ
+			case COMMAND_ID:     //0x02
+			command_id();
+			break;
+			case COMMAND_CHANNELKIND:     //0x03 Í¨µÀÀàĞÍÉèÖÃ
+			command_channelkind();
+			break;
+			case COMMAND_REPLYIP:     //0x03 Í¨µÀÀàĞÍÉèÖÃ
+			command_replyip();
+			break;
+			case COMMAND_STOP:
+			command_stop();
+			break;
+			case COMMAND_RECEIVE_BEACON:
+			DEBUG("COMMAND_RECEIVE_BEACON\r\n");
+			Net_Task_UpdataConnectFlag();
+			command_receive_beacon();
+			break;
+			case COMMAND_SETIP:   //ÉèÖÃIPµØÖ·
+			command_setip();
+			break;
+			case COMMAND_SET_RUNMODE:   //ÉèÖÃIPµØÖ·
+			command_setrunmode();
+			break;
+			case COMMAND_START:
+			command_start();
+			break;
+			case COMMAND_REQUIRE_PERIODWAVE:
+			command_require_periodwave();
+			break;
+			case COMMAND_SET_AP:
+			command_set_ap();
+			break;
+			case COMMAND_RECEIVE_ACTIVE_BEACON:
+			command_receive_active_beacon();
+			break;
+			case COMMAND_SET_FACTORY_PARAMETER:
+			command_set_factory_parameter();
+			break;
+			case COMMAND_SET_CHANNEL_CONDITION:
+			command_set_channel_condition();
+			break;
+			case COMMAND_REPLY_CHANNEL_CONDITION:
+			command_reply_channel_condition();
+			break;
+			case COMMAND_REPLY_RATE:    //ÉèÖÃ²ÉÑù²ÎÊı
+			command_reply_SampleParameter();
+			break;
+			case COMMAND_SAMPLE_RATE:    //ÉèÖÃ²ÉÑù²ÎÊı
+			command_set_SampleParameter();
+			break;
+			case COMMAND_SET_TCPSERVE:   //ÉèÖÃtcp serverµÄÄ¿±êµØÖ·ÀàËÆ
+			command_set_tcpserve();
+			break;
+			case COMMAND_REPLYTCPSERVE:   //·µ»Øtcp serverµÄÄ¿±êµØÖ·ÀàËÆ
+			command_replytcpserve();
+			break; 
+			case COMMAND_SET_TIME:           //·µ»ØapÖµ
+			command_set_time();
+			break;		
+			case COMMAND_REPLYAP:
+			command_replyap();  //·µ»ØapÖµ
+			break;
+			case COMMAND_APPLYNETSET:
+			command_applynetset();  //Ó¦ÓÃÍøÂçÉèÖÃ
+			osDelay (1000);
+			software_reset();
+			break;
+			case 0x40:
+			command_counter();  //Ó¦ÓÃÍøÂçÉèÖÃ
+			break;
+			case COMMAND_SET_ALARM_SOURCE:
+			command_set_alarm_source();
+			break;
+			case COMMAND_REPLY_ALARM_SOURCE:
+			//			   command_reply_alarm_source();
+			break;
+			case COMMAND_SET_LOW_POWER:
+			command_set_lowpower();
+			break;
+			case COMMAND_REPLY_LOW_POWER:
+			command_reply_lowpower();
+			break;
+			case COMMAND_SET_LOWPOWER_VALUE:
+			command_set_lowpower_value();
+			break;
+			case COMMAND_REPLY_LOWPOWER_VALUE:
+			command_reply_lowpower_value();
+			break;
+			case COMMAND_REPLY_RUNMODE:
+			command_reply_runmode();
+			break;
+			case COMMAND_ADJUST_TEMP:
+			command_adjust_temp();
+			break;
+			case COMMAND_ADJUST_ADC:
+			command_adjust_adc();
+			break;
+			case COMMAND_SET_SCALE:
+			command_set_scale();
+			break;
+			case COMMAND_REPLY_SCALE:
+			command_reply_scale();
+			break;
+			case COMMAND_SET_SNNUMBER:
+			command_set_snnumber();
+			osDelay (1000);
+			software_reset();
+			break;
+			case COMMAND_IAP_STATUE:
+			command_iap_statue();
+			break;
+			case COMMAND_REPLY_SW_VERSION:
+			command_reply_sw_version();
+			break;
+			case COMMAND_IAP_DATA:
+			command_iap_data();
+			break;
+			case COMMAND_RESET_SYSTEM:
+			command_reset_system();
+			break;
+			case COMMAND_TRANSMINT_OVER:
+			command_server_accept_data();
+			break;
+			case COMMAND_SET_ALARMVALUE:
+			command_set_alarm_value();
+			break;
+			case COMMAND_REPLY_ALARMVALUE:
+			command_reply_alarm_value();
+			break;
+			case COMMAND_ESP32_STATUE:
+			command_esp32_statue();
+			break;
+			case COMMAND_SET_BATTERY:
+			command_set_battery();
+			break;
+			default:
+			return 1;
+		}		
+	}
+	
+	return 1;
 	
 }
 
@@ -1595,7 +1607,7 @@ uint16_t getTelLength(void)  //ÇóµÄÊÇTLVÖĞVµÄ³¤¶È
 }
 uint8_t  isVaildTel(void)
 {
-	if(RxdBytes>=1)if(RxdTelBuf[0]!=0x7e)return(0);
+	if(RxdBytes>=1)if(RxdTelBuf[0]!=0x7e && RxdTelBuf[0]!=0x3a)return(0);
 //	if(RxdBytes>=2)if((RxdTelBuf[1]!=COMMAND_START)&&(RxdTelBuf[1]!=COMMAND_STOP)&&(RxdTelBuf[1]!=COMMAND_ID)
 //		                  &&(RxdTelBuf[1]!=COMMAND_CHANNELKIND)&&(RxdTelBuf[1]!=COMMAND_REPLYIP)&&(RxdTelBuf[1]!=COMMAND_SETIP)
 //						  &&(RxdTelBuf[1]!=COMMAND_REPLY_RATE)&&(RxdTelBuf[1]!=COMMAND_SAMPLE_RATE)&&(RxdTelBuf[1]!=COMMAND_ADJUST_TEMP)
@@ -1609,7 +1621,8 @@ uint8_t  isVaildTel(void)
 //				return(0);  //ÃüÁîĞĞ×î´óID ºóÆÚ°æ±¾²»×öÅĞ¶¨
 	
   if(RxdBytes>=4) { 
-		uint16_t length=getTelLength();
+		//uint16_t length=getTelLength();
+		uint16_t length = 200;
 		if((length>1000)) return(0);  //ÏŞÖÆ×î´óµÄÎª1000
 	}
 	return(1);				 // ºÏ·¨µÄ
@@ -1625,21 +1638,43 @@ uint8_t sumofRxdBuf(uint16_t l)  //ÇóºÍµÄ±¨ÎÄ£¬²»°üº¬ÆğÊ¼±êÊ¶,	l	µÄ³¤¶È°üÀ¨ÆğÊ¼±
 uint8_t isTelComplete(void)	   // =0 ²»ÍêÕû  =1 sum Error =2 ÕıÈ·
 {
 	uint32_t  temp8;
-	uint32_t   dat_len;
+	uint32_t  dat_len;
 
-	if(RxdBytes<4)return(0);
-  ////////////////
+	if(RxdBytes<4)
+	{
+		return(0);
+	}
+	
+	if(RxdBytes == RX_CONF_PROTOCOL_LEN)
+	{
+		return 2;
+	}
+	
+	
 	dat_len=getTelLength()+6;	//
-	if(dat_len==0)return(0);
-	if(RxdBytes<(dat_len))return(0);
-
+	
+	if(dat_len==0)
+	{
+		return(0);
+	}
+	
+	if(RxdBytes<(dat_len))
+	{
+		return(0);
+	}
+	
 	temp8=sumofRxdBuf(dat_len);
- 
-  if (RxdTelBuf[dat_len-1]==0x7e)
+	
+	if (RxdTelBuf[dat_len-1]==0x7e)
+	{
 		return(2); 
+	}
 	if (RxdTelBuf[dat_len-2]==temp8)
+	{
 		return(2); 
-	else{
+	}
+	else
+	{
 		return(1);
 	}	
 }						 
@@ -1713,7 +1748,7 @@ uint8_t leftRxdTel(void)		//Êı×é×óÒÆÒ»Î»
 uint8_t ReadRxdBuf(void)
 { 
 	uint8_t  c;
-	c=RxdBuf[RxdBufTailIndex];
+	c = RxdBuf[RxdBufTailIndex];
 	IncreaseRxdBufNum(RxdBufTailIndex);
 	return (c);
 }
@@ -1731,3 +1766,130 @@ void RxdBufProcessFunction(void *argument)
 			osDelay(1);		
 		}
 }
+
+
+
+
+void Rx_Conf_Req(uint8_t *buf , uint16_t len)
+{
+	uint8_t status = RX_CONF_STATUS_OK;
+	if(len == RX_CONF_PROTOCOL_LEN)
+	{
+		Rx_ConfData_t * Rx_ConfData = (Rx_ConfData_t *)buf;
+		if(Rx_ConfData->Head == RX_CONF_HEAD)
+		{
+			uint16_t crc = 0;
+			crc = CRC16_Modbus( &Rx_ConfData->Head , len);
+			if(crc == Rx_ConfData->crc)
+			{
+				DEBUG("Rx Conf Pass crc\r\n");
+				// --------Node Num---------
+				//config.SNnumber[7] = Rx_ConfData->NodeNum;
+				// -------------------------
+				// ----------Sample---------
+				
+				// -------------------------
+				// ---------up period-------
+				if(Rx_ConfData->up_period > 0 && Rx_ConfData->up_period <= 1000)
+				{
+					//config.workcycleseconds = Rx_ConfData->up_period * 60;
+				}
+				else
+				{
+					status = RX_CONF_STATUS_ERR;
+				}
+				// -------------------------
+				// ---------sample time-----
+				//config.sample_time = Rx_ConfData->sample_time;
+				// -------------------------
+				// ---------node_ip --------
+//				uint8_t temp_ip[4];
+//				memcmp(temp_ip , (uint8_t * )&Rx_ConfData->node_ip , 4 );
+//				snprintf(config.LocalIP , sizeof(config.LocalIP ) ,"%d.%d.%d.%d" , 	temp_ip[3] ,\
+//																					temp_ip[2] ,\
+//																					temp_ip[1] ,\
+//																					temp_ip[0]);
+//				snprintf(config.LocalGATEWAY , sizeof(config.LocalGATEWAY ) ,"%d.%d.%d.%d" , temp_ip[3] ,\
+//																					temp_ip[2] ,\
+//																					temp_ip[1] ,\
+//																					1);
+				
+				// -------------------------
+				// --------- waas ip  port--------
+//				memcmp(temp_ip , (uint8_t * )&Rx_ConfData->waas_ip , 4 );
+//				snprintf(config.TcpServer_IP , sizeof(config.TcpServer_IP ) ,"%d.%d.%d.%d" , 	temp_ip[3] ,\
+//																					temp_ip[2] ,\
+//																					temp_ip[1] ,\
+//																					temp_ip[0]);	
+//				snprintf(config.TcpServer_Port , sizeof(config.TcpServer_Port ) ,"%d" , Rx_ConfData->waas_port);	
+				
+				// -------------------------
+				// -------- Ch Type --------
+				// -------------------------
+				// --------ap info ---------
+				if(strlen(Rx_ConfData->ap_ssid) > 0)
+				{
+//					memset(config.APssid , 0 ,sizeof(config.APssid));
+//					memcpy(config.APssid , Rx_ConfData->ap_ssid ,strlen(Rx_ConfData->ap_ssid)  );
+				}
+				else
+				{
+					status = RX_CONF_STATUS_ERR;
+				}
+				
+//				memset(config.APpassword , 0 ,sizeof(config.APpassword));
+//				memcpy(config.APpassword , Rx_ConfData->ap_password ,strlen(Rx_ConfData->ap_password)  );
+
+				// -------------------------
+				
+				Rx_Conf_Resp(status , crc);
+				if(status == RX_CONF_STATUS_OK)
+				{
+					config.SNnumber[7] = Rx_ConfData->NodeNum;
+					config.workcycleseconds = Rx_ConfData->up_period * 60;
+					config.sample_time = Rx_ConfData->sample_time;
+					uint8_t temp_ip[4];
+					memcmp(temp_ip , (uint8_t * )&Rx_ConfData->node_ip , 4 );
+					snprintf(config.LocalIP , sizeof(config.LocalIP ) ,"%d.%d.%d.%d" , 	temp_ip[3] ,\
+																						temp_ip[2] ,\
+																						temp_ip[1] ,\
+																						temp_ip[0]);
+					snprintf(config.LocalGATEWAY , sizeof(config.LocalGATEWAY ) ,"%d.%d.%d.%d" , temp_ip[3] ,\
+																						temp_ip[2] ,\
+																						temp_ip[1] ,\
+																						1);		
+					memcmp(temp_ip , (uint8_t * )&Rx_ConfData->waas_ip , 4 );
+					snprintf(config.TcpServer_IP , sizeof(config.TcpServer_IP ) ,"%d.%d.%d.%d" , 	temp_ip[3] ,\
+																						temp_ip[2] ,\
+																						temp_ip[1] ,\
+																						temp_ip[0]);	
+					snprintf(config.TcpServer_Port , sizeof(config.TcpServer_Port ) ,"%d" , Rx_ConfData->waas_port);	
+
+					memset(config.APssid , 0 ,sizeof(config.APssid));
+					memcpy(config.APssid , Rx_ConfData->ap_ssid ,strlen(Rx_ConfData->ap_ssid)  );
+					memset(config.APpassword , 0 ,sizeof(config.APpassword));
+					memcpy(config.APpassword , Rx_ConfData->ap_password ,strlen(Rx_ConfData->ap_password)  );					
+				}
+				else
+				{
+					
+				}
+			}
+			
+		}
+	}
+}
+
+void Rx_Conf_Resp(uint8_t status , uint16_t crc)
+{
+	Rx_Conf_resp_t * Rx_Conf_resp = (Rx_Conf_resp_t *)CmdBuf;
+	
+	Rx_Conf_resp->Head = RX_CONF_HEAD;
+	Rx_Conf_resp->NodeNum = config.SNnumber[7];
+	Rx_Conf_resp->crc = crc;
+	Rx_Conf_resp->status = status;
+	
+	WriteDataToTXDBUF(CmdBuf,CmdBufLength);
+}
+
+
